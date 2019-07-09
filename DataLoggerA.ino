@@ -1,4 +1,4 @@
-/*  TITULO: Data Logger V1 SD y RTC.
+/*  TITULO: Data Logger V1.1 SD y RTC.
  
     AUTOR:
    
@@ -52,26 +52,27 @@ RTC      | [ ]A5/SCL  [ ] [ ] [ ]      RX<0[ ] |
 
 #include <SD.h>
 #include <DHT.h>
+#include <RTClib.h>
 #include <Wire.h>
-#include "Sodaq_DS3231.h"   // A5 SCL - A4 SDA
+//#include "Sodaq_DS3231.h"   // A5 SCL - A4 SDA
 #define DHTPIN1 2           // Pin 2 DHT
-#define DHTTYPE DHT22       // Sensor DHT22
+#define DHTTYPE DHT11       // Sensor DHT22
 #include <LiquidCrystal_I2C.h>
-LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // set the LCD address to 0x27 o 3F for a 16 chars and 2 line display
 const int chipSelect = 10;  // SD card pin selecionado
-//byte posicion=0;
 DHT dht1(DHTPIN1, DHTTYPE);
 File data_file;
 File root;
+RTC_DS1307 rtc;
 int Espacio;                // Variable que nos dice la posicion de la coma en el mensaje.
 String StringOne, StringTwo;
 String stringThree;
 unsigned long filename;
-unsigned long interval=5000;      // el tiempo que necesita esperar
-unsigned long previousMillis=20;  // millis() retornoa un unsigned long.
-unsigned long intervalotime=500;      // tiempo de espera para imprimir LCD
+unsigned long interval=18000;      // el tiempo que necesita esperar
+unsigned long previousMillis=200;  // millis() retornoa un unsigned long.
+unsigned long intervalotime=1000;      // tiempo de espera para imprimir LCD
 unsigned long previousMillistime=20;  // millis() retorna un unsigned long.
-unsigned int tstart;
+unsigned int  tstart;
 
 byte smile[8] = {
   0b00000000,
@@ -87,9 +88,8 @@ byte smile[8] = {
 void setup() 
 {
   // set the initial time here:
-  //cls();
   lcd.clear();
-  lcd.begin(16, 2);
+  lcd.begin(20, 4);
   lcd.createChar (0, smile);
   lcd.backlight();
   lcd.setCursor(2, 0);
@@ -111,10 +111,9 @@ void setup()
     Serial.println("Se ha producido un fallo al iniciar la comunicación SD");
     return;
   } 
-    Serial.println("Se ha iniciado la comunicación correctamente");
+    Serial.println("Se ha iniciado la comunicacion correctamente");
     root = SD.open("/");
     delay(2000);
-    //cls();
     lcd.clear();
 }
 
@@ -140,30 +139,35 @@ void loop()
    while (Espacio > 0 );
     {
     }    
-  if (StringOne == "Type")
+if (StringOne == "Type")
      {
       wait();
       LeeCSV(StringTwo);
      }
-  else if (StringOne == "" && StringTwo == "dir")
+else if (StringOne == "" && StringTwo == "dir")
     {
       //wait();
       printDirectory(root, 0);
       reset();
     }
-  else if (StringTwo == "Reset")
+else if (StringTwo == "Reset")
   {
     reset();
   }
+//else if (StringTwo == "time")
+  //{
+    //rtc.begin();
+    //rtc.adjust(DateTime(F(__DATE__),F(__TIME__)));
+  //}
 
-  else if (StringOne == "delete")
+else if (StringOne == "delete")
   {
     if (SD.exists(StringTwo)) 
    {
       SD.remove(StringTwo);
    }reset();
   }
-    else {}
+else {}
   } 
 
   unsigned long currentMillistime = millis(); // imprimir tiempo en la pantalla LCD 
@@ -176,7 +180,7 @@ void loop()
  {
           previousMillis = millis();
           DateTime now = rtc.now();
-          filename = now.date();
+          filename = now.day();
           filename = filename * 100;
           filename = filename + now.month();
           filename = filename * 10000;
@@ -188,14 +192,20 @@ void loop()
       Serial.print("Escribiendo en file ");
       Serial.print(stringThree);
       Serial.print(" ....");
-      PrintInfo();
       getData();
+      PrintInfo();
       PrintLCDTemp();
     }
     else {
     Serial.print("error abriendo ");
     Serial.print(stringThree);
     Serial.println(" ....");
+    //lcd.setCursor(0,0);
+    //lcd.print("                 ");
+    //lcd.setCursor(0,0);
+    //lcd.print("error open ");
+    //lcd.print(stringThree);
+    
  // if the file didn't open, print an error:
         }
  }
@@ -213,7 +223,7 @@ void getData()
       data_file.print(now.second(), DEC);
       data_file.print(":");
       data_file.print(",");
-      data_file.print(now.date(), DEC);
+      data_file.print(now.day(), DEC);
       data_file.print("/");
       data_file.print(now.month(), DEC);
       data_file.print("/");
@@ -243,7 +253,7 @@ void PrintInfo()
     Serial.print(":");
     Serial.print(now.second(), DEC);
     Serial.print(",");
-    Serial.print(now.date(), DEC);
+    Serial.print(now.day(), DEC);
     Serial.print("/");
     Serial.print(now.month(), DEC);
     Serial.print("/");
@@ -259,7 +269,9 @@ void PrintInfo()
 
 void PrintLCDtime()
 {
-    lcd.backlight();
+    //lcd.backlight();
+    //lcd.setCursor(0,0);
+    lcd.print("                 ");
     lcd.setCursor(0,0);
     DateTime now = rtc.now();
     lcd.print(now.hour(), DEC);
@@ -268,7 +280,7 @@ void PrintLCDtime()
     lcd.print(":");
     lcd.print(now.second(), DEC);
     lcd.print(",");
-    lcd.print(now.date(), DEC);
+    lcd.print(now.day(), DEC);
     lcd.print("/");
     lcd.print(now.month(), DEC);
     lcd.print("/");
